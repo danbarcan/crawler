@@ -1,26 +1,10 @@
-public class Main {
-    public static void main(String[] args) {
-        ChromeDriverTest chromeDriverTest = new ChromeDriverTest();
-
-        chromeDriverTest.prepare();
-        try {
-            chromeDriverTest.test();
-        } finally {
-            chromeDriverTest.teardown();
-        }
-    }
-}
-
 import org.openqa.selenium.By;
 import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,7 +22,7 @@ public class ChromeDriverTest {
                 "webdriver.chrome.driver",
                 "webdriver/chromedriver.exe");
 
-        testUrl = "https://www.autopartsuk.com/";
+        testUrl = "https://www.epiesa.ro/";
 
         // Create a new instance of the Chrome driver
         // Notice that the remainder of the code relies on the interface,
@@ -58,67 +42,78 @@ public class ChromeDriverTest {
         List<Manufacturer> manufacturerList = new ArrayList<>();
 //        List<String> manufacturers = new ArrayList<>();
         Map<String, List<String>> modelsByManufacturer = new HashMap<>();
-        WebElement link = driver.findElement(By.linkText("find your car manually"));
-        link.click();
-        WebElement selectManufacturerElement = driver.findElement(By.id("car-manufacturer"));
+        WebElement selectManufacturerElement = driver.findElement(By.name("select_marca"));
         Select selectManufacturer = new Select(selectManufacturerElement);
 //        manufacturers = selectManufacturer.getOptions().stream().filter(manufacturer -> !manufacturer.getText().equalsIgnoreCase("Make")).map(WebElement::getText).collect(Collectors.toList());
         manufacturerList = selectManufacturer.getOptions()
                 .stream()
-                .filter(manufacturer -> !manufacturer.getText().equalsIgnoreCase("Make"))
-                .map(manufacturer -> new Manufacturer(manufacturer.getText()))
+                .filter(manufacturer -> !manufacturer.getText().contains("MARCA"))
+                .map(manufacturer -> new Manufacturer(manufacturer.getText().trim()))
                 .collect(Collectors.toList());
 
         manufacturerList.forEach(manufacturer -> {
+            System.out.println("Select marca: " + manufacturer.getName());
             selectManufacturer.selectByVisibleText(manufacturer.getName());
-            WebElement selectModelElement = driver.findElement(By.id("car-model"));
-            while (!selectModelElement.isEnabled());
+            WebElement selectModelElement = driver.findElement(By.name("select_model"));
+            while (new Select(selectModelElement).getOptions().size() < 2);
             Select selectModel = new Select(selectModelElement);
             manufacturer.setModels(selectModel.getOptions()
                     .stream()
-                    .filter(model -> !model.getText().equalsIgnoreCase("Model"))
-                    .map(model -> new Model(model.getText()))
+                    .filter(model -> !model.getText().contains("MODEL"))
+                    .map(model -> new Model(model.getAttribute("value")))
                     .collect(Collectors.toList()));
             manufacturer.getModels().forEach(model -> {
-                selectModel.selectByVisibleText(model.getName());
-                WebElement selectVariantElement = driver.findElement(By.id("car-variant"));
-                while (!selectVariantElement.isEnabled());
+                System.out.println("Select model: " + model.getName());
+                selectModel.selectByValue(model.getName());
+                WebElement selectVariantElement = driver.findElement(By.name("select_carburant"));
+                while (new Select(selectVariantElement).getOptions().size() < 2);
                 Select selectVariant = new Select(selectVariantElement);
-                selectVariant.selectByVisibleText("All");
 
-                WebElement selectEngineElement = driver.findElement(By.id("car-engine-size"));
-                while (!selectEngineElement.isEnabled());
-                Select selectEngine = new Select(selectEngineElement);
+                model.setFuelTypes(selectVariant.getOptions()
+                .stream()
+                .filter(fuelType -> !fuelType.getText().contains("CARBURANT"))
+                .map(fuelType -> new FuelType(fuelType.getAttribute("value")))
+                .collect(Collectors.toList()));
 
-                model.setEngineSizes(selectEngine.getOptions()
-                        .stream()
-                        .filter(engineSize -> !engineSize.getText().equalsIgnoreCase("Engine Size"))
-                        .map(engineSize -> new EngineSize(engineSize.getText()))
-                        .collect(Collectors.toList()));
+                model.getFuelTypes().forEach(fuelType -> {
+                    System.out.println("Select carburant: " + fuelType.getName());
+                    selectVariant.selectByValue(fuelType.getName());
+                    WebElement selectEngineElement = driver.findElement(By.name("select_cilindree"));
+                    while (new Select(selectEngineElement).getOptions().size() < 2);
+                    Select selectEngine = new Select(selectEngineElement);
 
-                model.getEngineSizes().forEach(engineSize -> {
-                    selectEngine.selectByVisibleText(engineSize.getName());
-                    WebElement selectYearElement;
-                    try {
-                        selectYearElement = driver.findElement(By.id("car-year-of-manufacture"));
-                        while (!selectYearElement.isEnabled());
-                    } catch (StaleElementReferenceException e) {
-                        selectYearElement = driver.findElement(By.id("car-year-of-manufacture"));
-                        while (!selectYearElement.isEnabled());
-                    }
-                    Select selectYear = new Select(selectYearElement);
-
-                    engineSize.setYears(selectYear.getOptions()
+                    fuelType.setEngineSizes(selectEngine.getOptions()
                             .stream()
-                            .filter(year -> !year.getText().equalsIgnoreCase("Year Of Manufacture"))
-                            .map(WebElement::getText)
+                            .filter(engineSize -> !engineSize.getText().contains("CILINDREE"))
+                            .map(engineSize -> new EngineSize(engineSize.getAttribute("value")))
                             .collect(Collectors.toList()));
+
+                    fuelType.getEngineSizes().forEach(engineSize -> {
+                        System.out.println("Select cilindree: " + engineSize.getName());
+                        selectEngine.selectByValue(engineSize.getName());
+                        WebElement selectYearElement;
+                        try {
+                            selectYearElement = driver.findElement(By.name("select_motorizari"));
+                            while (!selectYearElement.isEnabled());
+                        } catch (StaleElementReferenceException e) {
+                            selectYearElement = driver.findElement(By.name("select_motorizari"));
+                            while (!selectYearElement.isEnabled());
+                        }
+                        Select selectYear = new Select(selectYearElement);
+
+                        engineSize.setPowers(selectYear.getOptions()
+                                .stream()
+                                .filter(year -> !year.getText().contains("PUTERE"))
+                                .map(WebElement::getText)
+                                .collect(Collectors.toList()));
+                    });
                 });
+
             });
             System.out.println(manufacturer);
         });
 
-        manufacturerList.forEach(Manufacturer::toString);
+        //manufacturerList.forEach(Manufacturer::toString);
 
         System.out.println("End");
 
